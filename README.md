@@ -1,5 +1,6 @@
 # VPFViewer
 A module that simplifes the way VPF are handled in Roblox, allows to show models, and manipulate them inside the VPF
+An example on how to use it can be found at the very bottom.
 
 ## Deps
  - You will need to get the "spring" module from BlackShibe and place it as a child of the ModuleScript.
@@ -10,10 +11,11 @@ A module that simplifes the way VPF are handled in Roblox, allows to show models
 local viewer = VPFViewer.new(player, vpf)
 ```
 
-| Parameter | Type     | Description                |
-| :-------- | :------- | :------------------------- |
-| `player` | `Player` | **Required**. The Local Player |
-| `vpf` | `ViewportFrame` | **Required**. The Viewport Frame object where all the items will be displayed |
+#### Init starts the module initializes variables and functions. ALWAYS CALL IT FIRST
+
+```lua
+viewer:Init()
+```
 
 #### :LockAxis allows to lock the x and y axis controlling the object's rotation in the VPF
 ```lua
@@ -60,4 +62,32 @@ VPFViewer:SetMultiplier(2) -- Twice as far as the maximum
 #### :Destroy destroys the viewer object (becomes nil), use when vpf and models no longer needed
 ```lua
 VPFViewer:Destroy()
+```
+
+## Example usage : 
+```lua
+local RS = game:GetService("ReplicatedStorage")
+local players = game:GetService("Players")
+
+local p = players.LocalPlayer
+local vpf = p.PlayerGui:WaitForChild("ViewportUI").ViewportFrame
+local parts = RS.Parts
+
+local Module = require(script.VPFViewer)
+
+local Viewer = Module.new(p, p.PlayerGui:WaitForChild("ViewportUI").ViewportFrame)
+
+Viewer:Init() -- ALWAYS INIT BEFORE ANY USE
+Viewer:CacheModels(parts:GetChildren())
+Viewer:LockAxis(false, false) -- Free Rotation on X and Y axis
+
+game.UserInputService.InputBegan:Connect(function(inputObject)
+	if inputObject.KeyCode == Enum.KeyCode.X then
+		Viewer:ShowModel(parts.Part2)
+	end
+	
+	if inputObject.KeyCode == Enum.KeyCode.V then
+		Viewer:ShowModel(parts.Part)
+	end
+end)
 ```

@@ -64,7 +64,7 @@ function VPFViewer:CleanCache()
 end
 
 -- Make a model appear on the VPF
-function VPFViewer:AsignNewModel(model)
+function VPFViewer:ShowModel(model)
 	if typeof(model) == "string" then
 		if model == self._currentModel.Name then return end
 	else

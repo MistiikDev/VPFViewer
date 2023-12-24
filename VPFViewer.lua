@@ -6,7 +6,7 @@ local spring = require(script.spring)
 
 function VPFViewer.new(player, vpf)
 	local self = {
-		_player = player,
+		_player = player, 
 		_camera = nil,
 		_mouse = player:GetMouse(),
 		

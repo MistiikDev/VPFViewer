@@ -1,6 +1,7 @@
 # VPFViewer
-A module that simplifes the way VPF are handled in Roblox, allows to show models, and manipulate them inside the VPF
-PLEASE CREDIT IF YOU ARE GOING TO USE IT!
+A module that simplifes the way VPF are handled in Roblox, allows to show models, and manipulate them inside the VPF.
+
+### PLEASE CREDIT IF YOU ARE GOING TO USE IT!
 
 ![](https://github.com/MistiikDev/VPFViewer/blob/main/2023-12-04-22-14-09_1.gif)
 

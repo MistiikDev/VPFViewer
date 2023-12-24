@@ -95,3 +95,14 @@ game.UserInputService.InputBegan:Connect(function(inputObject)
 	end
 end)
 ```
+## How does it work ?
+I'm just going to go over the maths calculations for the camera and the model's rotation. 
+### Camera Position : 
+We need to find the "depth" or distance between the camera and the model so that it perfectly fits inside the camera. For this we can take a look at the FOV and how it works to display models on screen (ignore the drawing skills pls)
+
+![image](https://github.com/MistiikDev/VPFViewer/assets/91028158/2dc72cc5-b3b7-46d3-9266-43f91d575c8a)
+We have a right triangle problem! We need to find the distance, here noted d, if you remember your math classes you know that tan(θ) = opposite side / adjacent side
+So we just want the adjacent side, we have: 
+ - adjacent = opposite / tan(θ).
+But here we see that the angle we want is half of the FOV, so : 
+ - adjacent = opposite / tan(fov / 2) <=> distance = radius / tan(math.rad(fov / 2))

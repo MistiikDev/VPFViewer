@@ -39,7 +39,6 @@ end
 	"Outside" functions, adjust settings or add models to cache for eg
 ]]--
 
--- 
 function VPFViewer:LockAxis(x_locked, y_locked)
 	self._x_locked = x_locked or false
 	self._y_locked = y_locked or false

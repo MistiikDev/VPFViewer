@@ -1,37 +1,43 @@
 local VPFViewer = {}
 VPFViewer.__index = VPFViewer
 
+local cas = game:GetService("ContextActionService")
+local uis = game:GetService("UserInputService")
+
 local runService = game:GetService("RunService")
 local spring = require(script.spring)
 
 function VPFViewer.new(player, vpf)
 	local self = {
-		_player = player, 
+		_player = player,
 		_camera = nil,
 		_mouse = player:GetMouse(),
-		
+
 		_currentModel = nil,
 		_currentModelCache = nil,
-		
+
 		_modelsCache = vpf:FindFirstChild("Cache"),
-		
+
 		_vpf = vpf,
 		_holdingLMB = false,
 		_connections = {},
-		
+
 		_mouseClickPos0 = nil,
 		_mouseClickPos1 = nil,
 		_mouseDelta = nil,
-		
+
 		_distanceFromModel = 0,
 		_cameraOffset = 1,
-		
+
 		_spring = nil,
-		
+
 		_x_locked = true,
-		_y_locked = false
+		_y_locked = false,
+		
+		_touchX = 0,
+		_touchY = 0
 	}
-	
+
 	return setmetatable(self, VPFViewer)
 end
 
@@ -39,6 +45,7 @@ end
 	"Outside" functions, adjust settings or add models to cache for eg
 ]]--
 
+-- 
 function VPFViewer:LockAxis(x_locked, y_locked)
 	self._x_locked = x_locked or false
 	self._y_locked = y_locked or false
@@ -88,54 +95,62 @@ end
 function VPFViewer:Destroy()
 	self:Clean()
 	self:CleanCache()
-	
+
 	self = nil -- destroy object
 end
 
 --[[
 	"Internal" functions, used inside the module, use at your own risk.
 ]]--
+
+function VPFViewer:moveObjectVPF(actionName, inputState, _inputObject)
+	if inputState == Enum.UserInputState.Begin then
+		self._holdingLMB = true
+		self:MoveCamera() 
+	elseif inputState == Enum.UserInputState.Cancel or inputState == Enum.UserInputState.End then
+		self._holdingLMB = false
+	end
+end
+
 function VPFViewer:SetupModel()
 	self._currentModelCache.PrimaryPart.CFrame = CFrame.new(0, 0, 0)
 	self._spring = spring.create(self._currentModel.PrimaryPart.Mass or 50)
-	
+
 	self:FitCameraToVPF()
-	
-	self._connections [#self._connections + 1] = self._vpf.InputBegan:Connect(function(inputobj)
-		if inputobj.UserInputType == Enum.UserInputType.MouseButton1 then
-			self._holdingLMB = true
-			
-			self:MoveCamera()
-		end
+
+	cas:BindAction("moveObjectVPF", function (...) self:moveObjectVPF(...) end, false, Enum.UserInputType.MouseButton1, Enum.UserInputType.Touch)
+
+	self._connections["touchBegin"] = uis.TouchMoved:Connect(function(touch, gameProcessedEvent)
+		self._touchX = touch.Position.X
+		self._touchY = touch.Position.Y
 	end)
 
-	self._connections [#self._connections + 1] = self._vpf.InputEnded:Connect(function(inputobj)
-		if inputobj.UserInputType == Enum.UserInputType.MouseButton1 then
-			self._holdingLMB = false
-		end
-	end)
+	self._connections["touchEnd"] = uis.TouchMoved:Connect(function(touch, gameProcessedEvent)
+		self._touchX = 0
+		self._touchY = 0
+	end)	
 end
 
 function VPFViewer:FitCameraToVPF()
 	self._vpf.CurrentCamera.CFrame = CFrame.new()
-	
+
 	local Model = self._currentModel
 	local cf, size = Model:GetBoundingBox()
-	
+
 	local fov = self._vpf.CurrentCamera.FieldOfView
 	local d = ((size.Magnitude / 2) / (math.tan( math.rad(fov / 2) )))
-	
+
 	self._currentModelCache.PrimaryPart.CFrame = self._vpf.CurrentCamera.CFrame * self._vpf.CurrentCamera.CFrame:ToObjectSpace(
-			CFrame.new(Vector3.new(0,0, -d * self._cameraOffset)) * CFrame.Angles(0, math.pi, 0) 
+		CFrame.new(Vector3.new(0,0, -d * self._cameraOffset)) * CFrame.Angles(0, math.pi, 0) 
 	)
-	
+
 	self._distanceFromModel = d
 end
 
 function VPFViewer:Init()
 	self._camera = Instance.new("Camera")
 	self._camera.CFrame = CFrame.new()
-	
+
 	self._vpf.CurrentCamera = self._camera
 end
 
@@ -143,10 +158,10 @@ function VPFViewer:Clean()
 	for i, con in pairs(self._connections) do 
 		con:Disconnect()
 	end
-	
+
 	self._connections["run"] = nil
 	self._vpf.CurrentCamera.CFrame = CFrame.new()
-	
+
 	if self._currentModelCache then
 		self._currentModelCache.PrimaryPart.CFrame = CFrame.new(0,-100,0)
 	end
@@ -154,11 +169,20 @@ end
 
 function VPFViewer:MoveCamera()
 	if self._currentModelCache then
-		self._mouseClickPos0 = Vector2.new(self._mouse.X, self._mouse.Y)
+		if uis.TouchEnabled then
+			self._mouseClickPos0 = Vector2.new(self._touchX, self._touchY)
+		else
+			self._mouseClickPos0 = Vector2.new(self._mouse.X, self._mouse.Y)
+		end
 		
 		if not self._connections["run"] then
 			self._connections["run"] = runService.RenderStepped:Connect(function(dt)
+				
 				if self._holdingLMB then
+					if uis.TouchEnabled then
+						self._mouseClickPos1 = Vector2.new(self._touchX, self._touchY)
+					end
+					
 					self._mouseClickPos1 = Vector2.new(self._mouse.X, self._mouse.Y)
 					self._mouseDelta = (self._mouseClickPos1 - self._mouseClickPos0) / 50
 
@@ -188,6 +212,7 @@ function VPFViewer:MoveCamera()
 				self._mouseClickPos0 = self._mouseClickPos1
 			end)
 		end
+
 	end	
 end
 

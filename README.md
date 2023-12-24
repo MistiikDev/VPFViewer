@@ -1,7 +1,11 @@
 # VPFViewer
 A module that simplifes the way VPF are handled in Roblox, allows to show models, and manipulate them inside the VPF
-An example on how to use it can be found at the very bottom.
 
+Uses a spring module to smoothen the rotation movement of the player.
+
+![](https://github.com/MistiikDev/VPFViewer/blob/main/2023-12-04-22-14-09_1.gif)
+
+An example on how to use it can be found at the very bottom.
 ## Deps
  - You will need to get the "spring" module from BlackShibe and place it as a child of the ModuleScript.
 

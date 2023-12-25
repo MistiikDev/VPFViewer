@@ -63,6 +63,16 @@ VPFViewer:SetMultiplier(2) -- Twice as far as the maximum
 | :-------- | :------- | :------------------------- |
 | `Value` | `number` | **Optional**. Multiplier of the distance between the model and the camera, defaults to 1 |
 
+#### :SetSensitivity sets how sensitive the 3D model will move relative to the mouse movement.
+```lua
+VPFViewer:SetSensitivity(10) -- Speed will be slowed by a factor of 10
+```
+
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `Value` | `number` | **Optional**. How sensitive the 3D model will move relative to the mouse movement. The lower the value is, the faster it will move |
+
+
 #### :Destroy destroys the viewer object (becomes nil), use when vpf and models no longer needed
 ```lua
 VPFViewer:Destroy()

@@ -49,13 +49,6 @@ function VPFViewer:Init()
 
 	self._camera = cam
 	self._vpf.CurrentCamera = self._camera
-end
-
-function VPFViewer:SetupModel()
-	self._currentModelCache:SetPrimaryPartCFrame(CFrame.new())
-	
-	self._spring = spring.create()
-	self:FitCameraToVPF()
 
 	cas:BindAction("moveObjectVPF", function (...) self:CAS_MoveCamera(...) end, false, Enum.UserInputType.MouseButton1, Enum.UserInputType.Touch)
 
@@ -68,6 +61,13 @@ function VPFViewer:SetupModel()
 		self._touchX = 0
 		self._touchY = 0
 	end)	
+end
+
+function VPFViewer:SetupModel()
+	self._currentModelCache:SetPrimaryPartCFrame(CFrame.new())
+	
+	self._spring = spring.create()
+	self:FitCameraToVPF()
 end
 
 function VPFViewer:FitCameraToVPF()
@@ -188,10 +188,6 @@ end
 
 --
 function VPFViewer:Clean()
-	for i, con in pairs(self._connections) do 
-		con:Disconnect()
-	end
-
 	self._connections["run"] = nil
 	self._camera.CFrame = CFrame.new()
 	
@@ -202,6 +198,10 @@ end
 
 -- Destroy the viewer, use when vpf and models no longer needed
 function VPFViewer:Destroy()
+	for i, con in pairs(self._connections) do 
+		con:Disconnect()
+	end
+	
 	self:Clean()
 	self:CleanCache()
 

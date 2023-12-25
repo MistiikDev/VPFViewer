@@ -94,7 +94,7 @@ game.UserInputService.InputBegan:Connect(function(inputObject)
 		
 		index = math.fmod(index, #parts) + 1 -- Loop through all models, and goes back to 1 once hit the last (remain of the euclidian division of i / #p)
 		
-		currentModel = parts[index]
+		currentModel = parts:GetChildren()[index]
 	end
 end)
 ```

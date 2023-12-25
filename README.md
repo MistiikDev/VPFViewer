@@ -92,7 +92,7 @@ game.UserInputService.InputBegan:Connect(function(inputObject)
 	if inputObject.KeyCode == Enum.KeyCode.X then
 		Viewer:ShowModel(currentModel)
 		
-		index = math.fmod(index, #parts) + 1 -- Loop through all models, and goes back to 1 once hit the last (remain of the euclidian division of i / #p)
+		index = math.fmod(index, #parts:GetChildren()) + 1 -- Loop through all models, and goes back to 1 once hit the last (remain of the euclidian division of i / #p)
 		
 		currentModel = parts:GetChildren()[index]
 	end

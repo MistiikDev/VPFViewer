@@ -188,6 +188,10 @@ end
 
 --
 function VPFViewer:Clean()
+	if self._connections["run"] then 
+		self._connections["run"]:Disconnect()
+	end
+
 	self._connections["run"] = nil
 	self._camera.CFrame = CFrame.new()
 	

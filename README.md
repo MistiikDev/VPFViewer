@@ -85,13 +85,16 @@ Viewer:Init() -- ALWAYS INIT BEFORE ANY USE
 Viewer:CacheModels(parts:GetChildren())
 Viewer:LockAxis(false, false) -- Free Rotation on X and Y axis
 
+local currentModel = parts.Car
+local index = 1
+
 game.UserInputService.InputBegan:Connect(function(inputObject)
 	if inputObject.KeyCode == Enum.KeyCode.X then
-		Viewer:ShowModel(parts.Part2)
-	end
-	
-	if inputObject.KeyCode == Enum.KeyCode.V then
-		Viewer:ShowModel(parts.Part)
+		Viewer:ShowModel(currentModel)
+		
+		index = math.fmod(index, #parts) + 1 -- Loop through all models, and goes back to 1 once hit the last (remain of the euclidian division of i / #p)
+		
+		currentModel = parts[index]
 	end
 end)
 ```

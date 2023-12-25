@@ -3,8 +3,8 @@ VPFViewer.__index = VPFViewer
 
 local cas = game:GetService("ContextActionService")
 local uis = game:GetService("UserInputService")
-
 local runService = game:GetService("RunService")
+
 local spring = require(script.spring)
 
 function VPFViewer.new(player, vpf)
@@ -33,7 +33,7 @@ function VPFViewer.new(player, vpf)
 
 		_x_locked = true,
 		_y_locked = false,
-		
+
 		_touchX = 0,
 		_touchY = 0
 	}
@@ -41,32 +41,98 @@ function VPFViewer.new(player, vpf)
 	return setmetatable(self, VPFViewer)
 end
 
---[[
-	"Outside" functions, adjust settings or add models to cache for eg
-]]--
+function VPFViewer:Init()
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 70
+	cam.Name = "VPFRender"
 
--- 
-function VPFViewer:LockAxis(x_locked, y_locked)
-	self._x_locked = x_locked or false
-	self._y_locked = y_locked or false
+	self._camera = cam
+	self._vpf.CurrentCamera = self._camera
 end
 
--- Add the models that will be displayed on the VPF to the cache to avoid loading times / issues and improve performances or large models.
-function VPFViewer:CacheModels(Models)
-	for i, model in pairs(Models) do 
-		local cache = model:Clone()
+function VPFViewer:SetupModel()
+	self._currentModelCache:SetPrimaryPartCFrame(CFrame.new())
+	
+	self._spring = spring.create()
+	self:FitCameraToVPF()
 
-		cache.Parent = self._modelsCache
-		cache.Name = model.Name.."_cache"
-		cache.PrimaryPart.CFrame = CFrame.new(0,-100,0)
+	cas:BindAction("moveObjectVPF", function (...) self:CAS_MoveCamera(...) end, false, Enum.UserInputType.MouseButton1, Enum.UserInputType.Touch)
+
+	self._connections["touchBegin"] = uis.TouchMoved:Connect(function(touch, gameProcessedEvent)
+		self._touchX = touch.Position.X
+		self._touchY = touch.Position.Y
+	end)
+
+	self._connections["touchEnd"] = uis.TouchMoved:Connect(function(touch, gameProcessedEvent)
+		self._touchX = 0
+		self._touchY = 0
+	end)	
+end
+
+function VPFViewer:FitCameraToVPF()
+	local cf, size = self._currentModelCache:GetBoundingBox()
+	local distance =  ((size.Magnitude / 2) / (math.tan(math.rad(self._camera.FieldOfView / 2))))
+		
+	self._camera.CFrame = CFrame.lookAt(self._currentModelCache.PrimaryPart.CFrame.Position + self._currentModelCache.PrimaryPart.CFrame.LookVector * distance, self._currentModelCache.PrimaryPart.CFrame.Position)
+	self._distanceFromModel = distance
+end
+
+function VPFViewer:CAS_MoveCamera(actionName, inputState, _inputObject)
+	if inputState == Enum.UserInputState.Begin then
+		self._holdingLMB = true
+
+		self:MoveCamera() 
+	elseif inputState == Enum.UserInputState.Cancel or inputState == Enum.UserInputState.End then
+		self._holdingLMB = false
 	end
 end
 
--- Clean current cache, use when models no longer needed
-function VPFViewer:CleanCache()
-	for i, model in pairs(self._modelsCache) do 
-		model:Destroy()
-	end
+function VPFViewer:MoveCamera()
+	if self._currentModelCache then
+		if uis.TouchEnabled then
+			self._mouseClickPos0 = Vector2.new(self._touchX, self._touchY)
+		else
+			self._mouseClickPos0 = Vector2.new(self._mouse.X, self._mouse.Y)
+		end
+
+		if not self._connections["run"] then
+			self._connections["run"] = runService.RenderStepped:Connect(function(dt)
+				if self._holdingLMB then
+					if uis.TouchEnabled then
+						self._mouseClickPos1 = Vector2.new(self._touchX, self._touchY)
+					end
+
+					self._mouseClickPos1 = Vector2.new(self._mouse.X, self._mouse.Y)
+					self._mouseDelta = (self._mouseClickPos1 - self._mouseClickPos0) / 50
+
+					local x_delta, y_delta = self._mouseDelta.X, self._mouseDelta.Y
+
+					local thetaY = (math.atan(y_delta / 10)) * (self._y_locked and 0 or 1)
+					local thetaX = (math.atan(x_delta / 10)) * (self._x_locked and 0 or 1)
+
+					self._spring:shove(Vector3.new(
+						-thetaY, 
+						thetaX,
+						0)
+					)
+				end
+
+				local spring_update = self._spring:update(dt)
+
+				local spring_rotation = CFrame.Angles(
+					spring_update.X, 
+					spring_update.Y, 
+					0
+				)
+
+				self._currentModelCache:SetPrimaryPartCFrame(self._currentModelCache.PrimaryPart.CFrame:Lerp(
+					self._currentModelCache.PrimaryPart.CFrame * spring_rotation, 0.3 * dt * 60))
+
+				self._mouseClickPos0 = self._mouseClickPos1
+			end)
+		end
+
+	end	
 end
 
 -- Make a model appear on the VPF
@@ -85,10 +151,43 @@ function VPFViewer:ShowModel(model)
 	self:SetupModel()
 end
 
+-- 
+function VPFViewer:LockAxis(x_locked, y_locked)
+	self._x_locked = x_locked or false
+	self._y_locked = y_locked or false
+end
+
+-- Add the models that will be displayed on the VPF to the cache to avoid loading times / issues and improve performances or large models.
+function VPFViewer:CacheModels(Models)
+	for i, model in pairs(Models) do 
+		local cache = model:Clone()
+		
+		cache.Parent = self._modelsCache
+		cache.Name = model.Name.."_cache"
+		cache:SetPrimaryPartCFrame(CFrame.new(0,-1000,0))
+	end
+end
+
+-- Clean current cache, use when models no longer needed
+function VPFViewer:CleanCache()
+	for i, model in pairs(self._modelsCache) do 
+		model:Destroy()
+	end
+end
 
 -- How far the model will be from the camera.
 function VPFViewer:SetMultiplier(value)
 	self._cameraOffset = value or 1
+end
+
+--
+function VPFViewer:Clean()
+	for i, con in pairs(self._connections) do 
+		con:Disconnect()
+	end
+
+	self._connections["run"] = nil
+	self._camera.CFrame = CFrame.new()
 end
 
 -- Destroy the viewer, use when vpf and models no longer needed
@@ -97,123 +196,6 @@ function VPFViewer:Destroy()
 	self:CleanCache()
 
 	self = nil -- destroy object
-end
-
---[[
-	"Internal" functions, used inside the module, use at your own risk.
-]]--
-
-function VPFViewer:moveObjectVPF(actionName, inputState, _inputObject)
-	if inputState == Enum.UserInputState.Begin then
-		self._holdingLMB = true
-		self:MoveCamera() 
-	elseif inputState == Enum.UserInputState.Cancel or inputState == Enum.UserInputState.End then
-		self._holdingLMB = false
-	end
-end
-
-function VPFViewer:SetupModel()
-	self._currentModelCache.PrimaryPart.CFrame = CFrame.new(0, 0, 0)
-	self._spring = spring.create(self._currentModel.PrimaryPart.Mass or 50)
-
-	self:FitCameraToVPF()
-
-	cas:BindAction("moveObjectVPF", function (...) self:moveObjectVPF(...) end, false, Enum.UserInputType.MouseButton1, Enum.UserInputType.Touch)
-
-	self._connections["touchBegin"] = uis.TouchMoved:Connect(function(touch, gameProcessedEvent)
-		self._touchX = touch.Position.X
-		self._touchY = touch.Position.Y
-	end)
-
-	self._connections["touchEnd"] = uis.TouchMoved:Connect(function(touch, gameProcessedEvent)
-		self._touchX = 0
-		self._touchY = 0
-	end)	
-end
-
-function VPFViewer:FitCameraToVPF()
-	self._vpf.CurrentCamera.CFrame = CFrame.new()
-
-	local Model = self._currentModel
-	local cf, size = Model:GetBoundingBox()
-
-	local fov = self._vpf.CurrentCamera.FieldOfView
-	local d = ((size.Magnitude / 2) / (math.tan( math.rad(fov / 2) )))
-
-	self._currentModelCache.PrimaryPart.CFrame = self._vpf.CurrentCamera.CFrame * self._vpf.CurrentCamera.CFrame:ToObjectSpace(
-		CFrame.new(Vector3.new(0,0, -d * self._cameraOffset)) * CFrame.Angles(0, math.pi, 0) 
-	)
-
-	self._distanceFromModel = d
-end
-
-function VPFViewer:Init()
-	self._camera = Instance.new("Camera")
-	self._camera.CFrame = CFrame.new()
-
-	self._vpf.CurrentCamera = self._camera
-end
-
-function VPFViewer:Clean()
-	for i, con in pairs(self._connections) do 
-		con:Disconnect()
-	end
-
-	self._connections["run"] = nil
-	self._vpf.CurrentCamera.CFrame = CFrame.new()
-
-	if self._currentModelCache then
-		self._currentModelCache.PrimaryPart.CFrame = CFrame.new(0,-100,0)
-	end
-end
-
-function VPFViewer:MoveCamera()
-	if self._currentModelCache then
-		if uis.TouchEnabled then
-			self._mouseClickPos0 = Vector2.new(self._touchX, self._touchY)
-		else
-			self._mouseClickPos0 = Vector2.new(self._mouse.X, self._mouse.Y)
-		end
-		
-		if not self._connections["run"] then
-			self._connections["run"] = runService.RenderStepped:Connect(function(dt)
-				
-				if self._holdingLMB then
-					if uis.TouchEnabled then
-						self._mouseClickPos1 = Vector2.new(self._touchX, self._touchY)
-					end
-					
-					self._mouseClickPos1 = Vector2.new(self._mouse.X, self._mouse.Y)
-					self._mouseDelta = (self._mouseClickPos1 - self._mouseClickPos0) / 50
-
-					local x_delta, y_delta = self._mouseDelta.X, self._mouseDelta.Y
-
-					local thetaX = (math.atan(y_delta / math.max(1, self._distanceFromModel))) * (self._x_locked and 0 or 1)
-					local thetaY = (math.atan(x_delta / math.max(1, self._distanceFromModel))) * (self._y_locked and 0 or 1)
-
-					self._spring:shove(Vector3.new(
-						math.sign(self._currentModelCache.PrimaryPart.CFrame.RightVector.X) * thetaX, 
-						math.sign(self._currentModelCache.PrimaryPart.CFrame.UpVector.Y) * thetaY, 
-						0)
-					)
-				end
-
-				local spring_update = self._spring:update(dt)
-
-				local spring_rotation = CFrame.Angles(
-					spring_update.X, 
-					spring_update.Y, 
-					0
-				)
-
-				self._currentModelCache.PrimaryPart.CFrame = self._currentModelCache.PrimaryPart.CFrame:Lerp(
-					self._currentModelCache.PrimaryPart.CFrame * spring_rotation, 0.3 * dt * 60)
-
-				self._mouseClickPos0 = self._mouseClickPos1
-			end)
-		end
-
-	end	
 end
 
 return VPFViewer

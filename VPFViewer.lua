@@ -28,6 +28,7 @@ function VPFViewer.new(player, vpf)
 
 		_distanceFromModel = 0,
 		_cameraOffset = 1,
+		_sensitivity = 10,
 
 		_spring = nil,
 
@@ -73,7 +74,7 @@ function VPFViewer:FitCameraToVPF()
 	local cf, size = self._currentModelCache:GetBoundingBox()
 	local distance =  ((size.Magnitude / 2) / (math.tan(math.rad(self._camera.FieldOfView / 2))))
 		
-	self._camera.CFrame = CFrame.lookAt(self._currentModelCache.PrimaryPart.CFrame.Position + self._currentModelCache.PrimaryPart.CFrame.LookVector * distance, self._currentModelCache.PrimaryPart.CFrame.Position)
+	self._camera.CFrame = CFrame.lookAt(self._currentModelCache.PrimaryPart.CFrame.Position + self._currentModelCache.PrimaryPart.CFrame.LookVector * distance * self._cameraOffset, self._currentModelCache.PrimaryPart.CFrame.Position)
 	self._distanceFromModel = distance
 end
 
@@ -107,8 +108,8 @@ function VPFViewer:MoveCamera()
 
 					local x_delta, y_delta = self._mouseDelta.X, self._mouseDelta.Y
 
-					local thetaY = (math.atan(y_delta / 10)) * (self._y_locked and 0 or 1)
-					local thetaX = (math.atan(x_delta / 10)) * (self._x_locked and 0 or 1)
+					local thetaY = (math.atan(y_delta / self._sensitivity)) * (self._y_locked and 0 or 1)
+					local thetaX = (math.atan(x_delta / self._sensitivity)) * (self._x_locked and 0 or 1)
 
 					self._spring:shove(Vector3.new(
 						-thetaY, 
@@ -180,6 +181,11 @@ function VPFViewer:SetMultiplier(value)
 	self._cameraOffset = value or 1
 end
 
+-- How sensitive the 3D model will move relative to the mouse movement. The lower the faster it will move
+function VPFViewer:SetSensitivity(_sensitivity)
+	self._sensitivity = _sensitivity or 10
+end
+
 --
 function VPFViewer:Clean()
 	for i, con in pairs(self._connections) do 
@@ -188,7 +194,7 @@ function VPFViewer:Clean()
 
 	self._connections["run"] = nil
 	self._camera.CFrame = CFrame.new()
-
+	
 	if (self._currentModelCache) then
 		self._currentModelCache:SetPrimaryPartCFrame(CFrame.new(0,-1000,0))
 	end

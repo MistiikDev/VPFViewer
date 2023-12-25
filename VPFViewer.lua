@@ -188,6 +188,10 @@ function VPFViewer:Clean()
 
 	self._connections["run"] = nil
 	self._camera.CFrame = CFrame.new()
+
+	if (self._currentModelCache) then
+		self._currentModelCache:SetPrimaryPartCFrame(CFrame.new(0,-1000,0))
+	end
 end
 
 -- Destroy the viewer, use when vpf and models no longer needed
